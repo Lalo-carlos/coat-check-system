@@ -8,4 +8,6 @@ pillow==10.4.0
 python-multipart==0.0.9
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
-psycopg[binary]==3.2.1
+reportlab==4.0.9
+fpdf2==2.7.0
+python-escpos==3.0

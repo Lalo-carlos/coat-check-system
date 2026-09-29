@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <title>Guardarropía QR - Producción</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial; background: #0f172a; color: #e2e8f0; line-height: 1.5; }
+    .navbar { background: #111827; border-bottom: 2px solid #2563eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .navbar h1 { font-size: 18px; font-weight: bold; }
+    .navbar span { font-size: 13px; color: #cbd5e1; }
+    .navbar button { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; flex-wrap: wrap; }
+    .tabs button { background: #1f2937; border: 1px solid #374151; color: #e2e8f0; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+    .tabs button.active { background: #2563eb; border-color: #2563eb; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    section { background: #111827; border: 1px solid #334155; border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    h2 { font-size: 16px; margin-bottom: 14px; color: #60a5fa; }
+    h3 { font-size: 13px; color: #cbd5e1; margin-top: 12px; margin-bottom: 8px; }
+    input, select, textarea, button { width: 100%; padding: 10px 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #475569; background: #020817; color: #f8fafc; font-size: 14px; }
+    button { background: #2563eb; border: none; cursor: pointer; font-weight: bold; color: white; }
+    button:hover { background: #1d4ed8; }
+    button.secondary { background: #16a34a; }
+    button.secondary:hover { background: #15803d; }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+    .card { background: #0b1220; border-left: 4px solid #2563eb; border-radius: 8px; padding: 12px; }
+    .card strong { color: #60a5fa; display: block; }
+    .card .small { font-size: 12px; color: #cbd5e1; }
+    .alert { padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+    .alert.info { background: #1e3a8a; color: #93c5fd; border-left: 4px solid #3b82f6; }
+    .alert.success { background: #064e3b; color: #86efac; border-left: 4px solid #10b981; }
+    .alert.error { background: #7f1d1d; color: #fca5a5; border-left: 4px solid #ef4444; }
+    .qr { max-width: 180px; margin: 10px 0; border-radius: 8px; }
+    #reader { width: 100%; max-width: 300px; border-radius: 8px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 13px; }
+    th { background: #1f2937; font-weight: bold; color: #93c5fd; }
+    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .status-stored { background: #fbbf24; color: #000; }
+    .status-retired { background: #34d399; color: #000; }
+    .status-lost { background: #f87171; color: #fff; }
+    .status-online { color: #86efac; }
+    .status-offline { color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div>
+      <h1>🔐 Guardarropía QR</h1>
+      <span>Versión 2.1 - Producción</span>
+    </div>
+    <div style="text-align: right;">
+      <div id="userDisplay" style="font-size: 13px; margin-bottom: 8px;"></div>
+      <div style="font-size: 11px; margin-bottom: 6px;">
+        <span class="status-online" id="syncStatus">● Sincronizado</span>
+      </div>
+      <button onclick="logout()" style="font-size: 12px;">Salir</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- LOGIN -->
+    <div id="loginTab" class="tab-content active">
+      <section>
+        <h2>Iniciar sesión</h2>
+        <input id="username" placeholder="Usuario">
+        <input id="password" type="password" placeholder="Contraseña">
+        <button onclick="login()">Entrar</button>
+        <div id="loginMsg"></div>
+      </section>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="mainApp" style="display: none;">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('scanner')">🔍 Escáner</button>
+        <button class="tab-btn" onclick="switchTab('register')">📝 Registrar</button>
+        <button class="tab-btn" onclick="switchTab('pending')">⏳ Pendientes</button>
+        <button class="tab-btn" onclick="switchTab('cash')">💳 Caja</button>
+        <button class="tab-btn" onclick="switchTab('reports')">📊 Reportes</button>
+        <button class="tab-btn" onclick="switchTab('admin')">⚙️ Admin</button>
+        <button class="tab-btn" onclick="switchTab('settings')">⚡ Configuración</button>
+      </div>
+
+      <!-- SCANNER -->
+      <div id="scanner" class="tab-content active">
+        <section>
+          <h2>Escáner QR</h2>
+          <div id="reader"></div>
+          <input id="manualToken" placeholder="Pega el token QR">
+          <button onclick="scanManual()" class="secondary">Buscar</button>
+          <div id="scanResult"></div>
+        </section>
+        <section id="ticketDetail" style="display: none;">
+          <h2>Detalles del ticket</h2>
+          <div id="ticketInfo"></div>
+          <button onclick="confirmReturn()" class="secondary">✅ Confirmar entrega</button>
+          <button onclick="markLost()" class="danger">❌ Marcar perdido</button>
+        </section>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="register" class="tab-content">
+        <section>
+          <h2>Registrar prenda</h2>
+          <input id="hanger" placeholder="Percha (ej: A-12)">
+          <input id="description" placeholder="Descripción">
+          <input id="price" type="number" placeholder="Precio" value="0">
+          <select id="paymentMethod">
+            <option value="cash">Efectivo</option>
+            <option value="card">Tarjeta</option>
+            <option value="bank_qr">QR bancario</option>
+            <option value="other">Otro</option>
+          </select>
+          <input id="photo" type="file" accept="image/*" capture="environment">
+          <textarea id="notes" rows="3" placeholder="Notas"></textarea>
+          <button onclick="registerTicket()" class="secondary">Guardar prenda</button>
+          <div id="registerMsg"></div>
+        </section>
+      </div>
+
+      <!-- PENDING -->
+      <div id="pending" class="tab-content">
+        <section>
+          <h2>Prendas pendientes</h2>
+          <button onclick="loadPending()" class="secondary">Actualizar</button>
+          <div id="pendingList" style="margin-top: 14px;"></div>
+        </section>
+      </div>
+
+      <!-- CASH -->
+      <div id="cash" class="tab-content">
+        <section>
+          <h2>Apertura de caja</h2>
+          <input id="openingAmount" type="number" placeholder="Monto inicial" value="0">
+          <input id="openingNotes" placeholder="Notas">
+          <button onclick="openCash()" class="secondary">Abrir caja</button>
+        </section>
+        <section>
+          <h2>Cierre de caja</h2>
+          <input id="closingAmount" type="number" placeholder="Monto final" value="0">
+          <input id="closingNotes" placeholder="Notas">
+          <button onclick="closeCash()" class="secondary">Cerrar caja</button>
+          <div id="cashMsg"></div>
+        </section>
+        <section>
+          <h2>Resumen</h2>
+          <div id="cashSummary"></div>
+        </section>
+      </div>
+
+      <!-- REPORTS -->
+      <div id="reports" class="tab-content">
+        <section>
+          <h2>Reporte diario</h2>
+          <button onclick="generateDailyReport()" class="secondary">Generar</button>
+          <button onclick="downloadDailyPDF()" class="secondary" style="margin-top: 10px;">📥 Descargar PDF</button>
+          <div id="dailyReport" style="margin-top: 14px;"></div>
+        </section>
+        <section>
+          <h2>Reporte por turno</h2>
+          <input id="shiftStart" type="datetime-local">
+          <input id="shiftEnd" type="datetime-local">
+          <button onclick="generateShiftReport()" class="secondary">Generar</button>
+          <button onclick="downloadShiftPDF()" class="secondary" style="margin-top: 10px;">📥 Descargar PDF</button>
+          <div id="shiftReport" style="margin-top: 14px;"></div>
+        </section>
+      </div>
+
+      <!-- ADMIN -->
+      <div id="admin" class="tab-content">
+        <section>
+          <h2>Crear empleado</h2>
+          <input id="newUsername" placeholder="Usuario">
+          <input id="newPassword" type="password" placeholder="Contraseña">
+          <input id="newFullName" placeholder="Nombre completo">
+          <select id="newRole">
+            <option value="cashier">Cajero</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="admin">Administrador</option>
+          </select>
+          <button onclick="createEmployee()" class="secondary">Crear</button>
+          <div id="createMsg"></div>
+        </section>
+        <section>
+          <h2>Empleados</h2>
+          <div id="employeesList"></div>
+        </section>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="settings" class="tab-content">
+        <section>
+          <h2>Estado del sistema</h2>
+          <div class="card">
+            <strong>API:</strong> <span id="apiStatus">Verificando...</span><br>
+            <strong>Usuario:</strong> <span id="currentUser"></span><br>
+            <strong>Rol:</strong> <span id="currentRole"></span><br>
+            <strong>Almacenamiento:</strong> <span id="storageStatus">Disponible</span>
+          </div>
+        </section>
+        <section>
+          <h2>Acciones</h2>
+          <button onclick="syncData()" class="secondary">Sincronizar datos</button>
+          <button onclick="exportData()" class="secondary" style="margin-top: 10px;">📤 Exportar datos</button>
+          <button onclick="logout()" class="danger" style="margin-top: 10px;">Cerrar sesión</button>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = '', currentUser = {}, selectedTicket = null, cashSessionId = null;
+
+    async function api(path, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      try {
+        const response = await fetch(path, { ...options, headers });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Error');
+        updateSyncStatus(true);
+        return data;
+      } catch (error) {
+        updateSyncStatus(false);
+        throw error;
+      }
+    }
+
+    function updateSyncStatus(online) {
+      const el = document.getElementById('syncStatus');
+      if (online) {
+        el.innerHTML = '● Sincronizado';
+        el.className = 'status-online';
+      } else {
+        el.innerHTML = '● Sin conexión';
+        el.className = 'status-offline';
+      }
+    }
+
+    async function login() {
+      try {
+        const data = await api('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `username=${document.getElementById('username').value}&password=${document.getElementById('password').value}`
+        });
+        token = data.access_token;
+        currentUser = data.employee;
+        document.getElementById('userDisplay').textContent = `${currentUser.full_name} (${currentUser.role})`;
+        document.getElementById('currentUser').textContent = currentUser.username;
+        document.getElementById('currentRole').textContent = currentUser.role;
+        document.getElementById('loginTab').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        startScanner();
+      } catch (error) {
+        document.getElementById('loginMsg').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    function logout() {
+      token = '';
+      currentUser = {};
+      selectedTicket = null;
+      document.getElementById('loginTab').style.display = 'block';
+      document.getElementById('mainApp').style.display = 'none';
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function startScanner() {
+      if (!window.Html5Qrcode) return;
+      const scanner = new Html5Qrcode('reader');
+      scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, text => {
+        document.getElementById('manualToken').value = text;
+        scanner.stop();
+        scanManual();
+      }).catch(() => {});
+    }
+
+    async function scanManual() {
+      try {
+        const ticket = await api('/tickets/scan', {
+          method: 'POST',
+          body: JSON.stringify({ qr_token: document.getElementById('manualToken').value })
+        });
+        selectedTicket = ticket;
+        document.getElementById('ticketInfo').innerHTML = `
+          <div class="card">
+            <strong>#${ticket.id}</strong> ${ticket.description}<br>
+            <span class="small">Percha: ${ticket.hanger_number || 'N/A'} | $${ticket.price}</span>
+          </div>
+        `;
+        document.getElementById('ticketDetail').style.display = 'block';
+      } catch (error) {
+        document.getElementById('scanResult').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function confirmReturn() {
+      try {
+        await api(`/tickets/${selectedTicket.id}/return`, {
+          method: 'POST',
+          body: JSON.stringify({ notes: 'Entregado' })
+        });
+        document.getElementById('scanResult').innerHTML = `<div class="alert success">✅ Entregado</div>`;
+        document.getElementById('ticketDetail').style.display = 'none';
+        document.getElementById('manualToken').value = '';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function markLost() {
+      if (currentUser.role !== 'supervisor' && currentUser.role !== 'admin') {
+        alert('Solo supervisores');
+        return;
+      }
+      const details = prompt('Detalles:');
+      if (!details) return;
+      try {
+        await api(`/tickets/${selectedTicket.id}/lost`, {
+          method: 'POST',
+          body: JSON.stringify({ details, supervisor_name: currentUser.full_name })
+        });
+        alert('Marcado como perdido');
+        document.getElementById('ticketDetail').style.display = 'none';
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function registerTicket() {
+      try {
+        await api('/tickets', {
+          method: 'POST',
+          body: JSON.stringify({
+            hanger_number: document.getElementById('hanger').value || null,
+            description: document.getElementById('description').value,
+            price: parseFloat(document.getElementById('price').value || 0),
+            payment_method: document.getElementById('paymentMethod').value,
+            notes: document.getElementById('notes').value || null
+          })
+        });
+        document.getElementById('registerMsg').innerHTML = '<div class="alert success">✅ Prenda registrada</div>';
+        document.getElementById('hanger').value = '';
+        document.getElementById('description').value = '';
+      } catch (error) {
+        document.getElementById('registerMsg').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function loadPending() {
+      try {
+        const tickets = await api('/tickets/pending');
+        let html = '';
+        tickets.forEach(t => {
+          html += `<div class="card"><strong>#${t.id}</strong> ${t.description}<br><span class="small">$${t.price}</span> <span class="status-badge status-${t.status}">${t.status}</span></div>`;
+        });
+        document.getElementById('pendingList').innerHTML = html || '<p>Sin pendientes</p>';
+      } catch (error) {
+        document.getElementById('pendingList').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function openCash() {
+      try {
+        const data = await api('/cash-session/open', {
+          method: 'POST',
+          body: JSON.stringify({
+            opening_amount: parseFloat(document.getElementById('openingAmount').value || 0),
+            notes: document.getElementById('openingNotes').value
+          })
+        });
+        cashSessionId = data.id;
+        document.getElementById('cashMsg').innerHTML = '<div class="alert success">✅ Caja abierta</div>';
+      } catch (error) {
+        document.getElementById('cashMsg').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function closeCash() {
+      if (!cashSessionId) {
+        alert('Abre caja primero');
+        return;
+      }
+      try {
+        await api(`/cash-session/${cashSessionId}/close`, {
+          method: 'POST',
+          body: JSON.stringify({
+            closing_amount: parseFloat(document.getElementById('closingAmount').value),
+            notes: document.getElementById('closingNotes').value
+          })
+        });
+        document.getElementById('cashMsg').innerHTML = '<div class="alert success">✅ Caja cerrada</div>';
+        cashSessionId = null;
+      } catch (error) {
+        document.getElementById('cashMsg').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function generateDailyReport() {
+      try {
+        const data = await api('/reports/daily');
+        let html = `<div class="card"><strong>Fecha:</strong> ${data.date}<br><strong>Registradas:</strong> ${data.created_tickets}<br><strong>Entregadas:</strong> ${data.retired_tickets}<br><strong>Ingresos:</strong> $${data.revenue.toFixed(2)}</div>`;
+        document.getElementById('dailyReport').innerHTML = html;
+      } catch (error) {
+        document.getElementById('dailyReport').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function downloadDailyPDF() {
+      try {
+        const response = await fetch('/reports/daily/pdf', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'reporte_diario.pdf';
+        a.click();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function generateShiftReport() {
+      try {
+        const start = document.getElementById('shiftStart').value;
+        const end = document.getElementById('shiftEnd').value;
+        const data = await api(`/reports/shift?start=${start}&end=${end}`);
+        let html = `<div class="card"><strong>${data.period}</strong><br>Creadas: ${data.created}<br>Entregadas: ${data.retired}<br>Ingresos: $${data.revenue.toFixed(2)}</div>`;
+        document.getElementById('shiftReport').innerHTML = html;
+      } catch (error) {
+        document.getElementById('shiftReport').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function downloadShiftPDF() {
+      const start = document.getElementById('shiftStart').value;
+      const end = document.getElementById('shiftEnd').value;
+      const url = `/reports/shift/pdf?start=${start}&end=${end}`;
+      try {
+        const response = await fetch(url, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const blob = await response.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'reporte_turno.pdf';
+        a.click();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function createEmployee() {
+      try {
+        await api('/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `username=${document.getElementById('newUsername').value}&password=${document.getElementById('newPassword').value}&full_name=${document.getElementById('newFullName').value}&role=${document.getElementById('newRole').value}`
+        });
+        document.getElementById('createMsg').innerHTML = '<div class="alert success">✅ Empleado creado</div>';
+        loadEmployees();
+      } catch (error) {
+        document.getElementById('createMsg').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function loadEmployees() {
+      try {
+        const emps = await api('/admin/employees');
+        let html = '';
+        emps.forEach(e => {
+          html += `<div class="card"><strong>${e.full_name}</strong><br><span class="small">${e.username} (${e.role})</span></div>`;
+        });
+        document.getElementById('employeesList').innerHTML = html;
+      } catch (error) {
+        document.getElementById('employeesList').innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    }
+
+    async function syncData() {
+      try {
+        await api('/sync/status');
+        alert('✅ Sincronizado');
+      } catch (error) {
+        alert('Sin conexión: ' + error.message);
+      }
+    }
+
+    function exportData() {
+      alert('Exportación disponible en siguiente versión');
+    }
+  </script>
+</body>
+</html>
