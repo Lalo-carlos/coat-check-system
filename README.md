@@ -1,24 +1,32 @@
-# Sistema de guardarropía con QR para discoteca
+# Guardarropía QR avanzada
 
-Este proyecto es un MVP funcional en Python con FastAPI para gestionar prendas.
+Este proyecto es una versión profesional del MVP de guardarropía para discotecas. Incluye autenticación JWT, seguridad para QR, gestión de tickets y cierre de caja.
 
-## Qué incluye
+## Requisitos
 
-- Login de empleados
-- Registro de prendas
-- Generación de QR único
-- Búsqueda por token QR para devolución
-- Lista de pendientes
-- Cierre de caja
-- Historial de movimientos
-- Interfaz web simple en el navegador
+- Python 3.11+
+- PostgreSQL opcional para producción
+- SQLite por defecto para arrancar rápido
 
-## Ejecutar
+## Instalación
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+## Configuración
+
+Copia el archivo `.env.example` a `.env` y ajusta los valores.
+
+```bash
+cp .env.example .env
+```
+
+## Ejecutar
+
+```bash
 uvicorn app.main:app --reload
 ```
 
@@ -26,15 +34,41 @@ Abrir:
 - http://localhost:8000
 - Swagger: http://localhost:8000/docs
 
+## Usuarios demo
+
+Se puede crear un usuario con rol `cashier` y luego iniciar sesión por `/login`.
+
+Ejemplo de usuario:
+```
+username: cashier1
+password: 1234
+```
+
+## Funcionalidades
+
+- Login con JWT
+- Registro de empleados con roles
+- Registro de prendas con percha, descripción, precio, pago y notas
+- Generación de QR único de un solo uso
+- Escaneo por token
+- Entrega confirmada y invalidación del QR
+- Tickets perdidos con aprobación de supervisor
+- Historial de movimientos
+- Cierre de caja por turno
+- Resumen de caja
+
 ## Seguridad
 
-Los QR usan un token aleatorio generado con `secrets.token_urlsafe(24)`. Al entregar la prenda, el token se invalida para evitar reutilización.
+- Las contraseñas se guardan con hash bcrypt
+- El QR contiene un token aleatorio y se invalida al entregar la prenda
+- Las operaciones sensibles requieren autenticación
+- El estado `lost` exige validación de supervisor
 
-## Siguientes pasos recomendados
+## Próximos pasos
 
-- JWT para autenticación real
-- PostgreSQL en producción
-- PWA para escaneo desde móvil
+- PWA con cámara para escaneo real desde móvil
+- PostgreSQL para producción
 - impresión térmica
-- control por caja y turno
-- incidencias y supervisión
+- panel administrativo completo
+- control de puestos y casilleros
+- modo sin internet / Wi‑Fi local

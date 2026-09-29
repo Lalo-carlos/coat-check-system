@@ -20,13 +20,14 @@ class Employee(Base):
     tickets_in = relationship("Ticket", foreign_keys="Ticket.employee_in_id", back_populates="employee_in")
     tickets_out = relationship("Ticket", foreign_keys="Ticket.employee_out_id", back_populates="employee_out")
     movements = relationship("Movement", back_populates="employee")
+    cash_sessions = relationship("CashSession", back_populates="employee")
 
 
 class Ticket(Base):
     __tablename__ = "tickets"
 
     id = Column(Integer, primary_key=True, index=True)
-    qr_token = Column(String, unique=True, index=True, nullable=False)
+    qr_token = Column(String, unique=True, index=True, nullable=True)
     hanger_number = Column(String, index=True, nullable=True)
     description = Column(String, nullable=False)
     photo_url = Column(String, nullable=True)
@@ -57,3 +58,17 @@ class Movement(Base):
 
     ticket = relationship("Ticket", back_populates="movements")
     employee = relationship("Employee", back_populates="movements")
+
+
+class CashSession(Base):
+    __tablename__ = "cash_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    opened_at = Column(DateTime, default=datetime.utcnow)
+    closed_at = Column(DateTime, nullable=True)
+    opening_amount = Column(Float, default=0.0)
+    closing_amount = Column(Float, default=0.0)
+    notes = Column(Text, nullable=True)
+
+    employee = relationship("Employee", back_populates="cash_sessions")

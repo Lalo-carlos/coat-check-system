@@ -26,6 +26,12 @@ class EmployeeRead(BaseModel):
     active: bool
 
 
+class EmployeeLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    employee: EmployeeRead
+
+
 class TicketCreate(BaseModel):
     hanger_number: Optional[str] = None
     description: str = Field(..., min_length=3)
@@ -33,14 +39,14 @@ class TicketCreate(BaseModel):
     price: float = 0.0
     payment_method: str = "cash"
     notes: Optional[str] = None
-    employee_in_id: int
+    employee_in_id: Optional[int] = None
 
 
 class TicketRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    qr_token: str
+    qr_token: Optional[str]
     hanger_number: Optional[str]
     description: str
     photo_url: Optional[str]
@@ -59,15 +65,18 @@ class TicketScan(BaseModel):
 
 
 class TicketReturn(BaseModel):
-    employee_out_id: int
     notes: Optional[str] = None
 
 
 class TicketLost(BaseModel):
-    employee_id: int
     details: str
     supervisor_name: str
     photo_url: Optional[str] = None
+
+
+class TicketStatusUpdate(BaseModel):
+    status: str
+    notes: Optional[str] = None
 
 
 class MovementRead(BaseModel):
@@ -87,7 +96,11 @@ class BoxSummary(BaseModel):
     status_breakdown: dict
 
 
-class TicketStatusUpdate(BaseModel):
-    status: str
-    employee_id: int
+class CashSessionCreate(BaseModel):
+    opening_amount: float = 0.0
+    notes: Optional[str] = None
+
+
+class CashSessionClose(BaseModel):
+    closing_amount: float
     notes: Optional[str] = None
