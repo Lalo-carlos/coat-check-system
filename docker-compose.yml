@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: coat_check_web
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://coat_check:coat_check_pass@postgres:5432/coat_check
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRE_MINUTES: 480
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+      - ./app:/app/app
+    depends_on:
+      - postgres
+    networks:
+      - coat_check_net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: coat_check_db
+    environment:
+      POSTGRES_USER: coat_check
+      POSTGRES_PASSWORD: coat_check_pass
+      POSTGRES_DB: coat_check
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - coat_check_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coat_check"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  coat_check_net:
+    driver: bridge
