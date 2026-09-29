@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Escáner QR - Guardarropía</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body{font-family:Arial;background:#0f172a;color:#e2e8f0;padding:20px;max-width:720px;margin:auto}
+    section{background:#111827;border:1px solid #334155;border-radius:12px;padding:16px;margin:14px 0}
+    input,button{width:100%;box-sizing:border-box;padding:11px;margin:6px 0;border-radius:8px;border:1px solid #475569;background:#020617;color:white}
+    button{background:#2563eb;border:0;font-weight:bold}.ok{color:#86efac}.error{color:#fca5a5}
+  </style>
+</head>
+<body>
+<h1>Guardarropía QR</h1>
+<section>
+  <h2>Acceso</h2>
+  <input id="username" placeholder="Usuario">
+  <input id="password" type="password" placeholder="Contraseña">
+  <button onclick="login()">Iniciar sesión</button><p id="auth"></p>
+</section>
+<section>
+  <h2>Escanear ticket</h2>
+  <div id="reader"></div>
+  <input id="token" placeholder="También puedes pegar el token QR">
+  <button onclick="scanToken()">Buscar ticket</button>
+  <pre id="result"></pre>
+</section>
+<section>
+  <h2>Foto de prenda</h2>
+  <input id="photo" type="file" accept="image/*" capture="environment">
+  <button onclick="uploadPhoto()">Subir foto</button><p id="photoResult"></p>
+</section>
+<script>
+let token='';
+async function api(path, options={}){
+  options.headers={...(options.headers||{}), ...(token?{Authorization:'Bearer '+token}:{})};
+  const r=await fetch(path,options);const d=await r.json();if(!r.ok)throw Error(d.detail||'Error');return d;
+}
+async function login(){try{const d=await api('/phase2/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username.value,password:password.value})});token=d.access_token;auth.className='ok';auth.textContent='Sesión iniciada';startScanner()}catch(e){auth.className='error';auth.textContent=e.message}}
+async function scanToken(){try{const d=await api('/tickets/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({qr_token:document.getElementById('token').value})});result.textContent=JSON.stringify(d,null,2)}catch(e){result.textContent=e.message}}
+function startScanner(){if(!window.Html5Qrcode)return;const scanner=new Html5Qrcode('reader');scanner.start({facingMode:'environment'},{fps:10,qrbox:250},text=>{document.getElementById('token').value=text;scanner.stop();scanToken()}).catch(e=>result.textContent='La cámara requiere HTTPS o localhost: '+e)}
+async function uploadPhoto(){try{const data=new FormData();data.append('file',photo.files[0]);const d=await api('/phase2/photos',{method:'POST',body:data});photoResult.textContent=d.url}catch(e){photoResult.textContent=e.message}}
+</script>
+</body></html>
